@@ -43,7 +43,7 @@ class QLearningAgent(ReinforcementAgent):
         ReinforcementAgent.__init__(self, **args)
 
         "*** YOUR CODE HERE ***"
-
+        self.QValues = {}
     def getQValue(self, state, action):
         """
           Returns Q(state,action)
@@ -51,7 +51,12 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if (state,action) in self.QValues:
+            return self.QValues[(state,action)]
+        else:
+            return 0.0
+
+        #util.raiseNotDefined()
 
 
     def computeValueFromQValues(self, state):
@@ -61,8 +66,18 @@ class QLearningAgent(ReinforcementAgent):
           there are no legal actions, which is the case at the
           terminal state, you should return a value of 0.0.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if (len(self.getLegalActions(state)) == 0):
+          return 0
+        
+        bestValue = float("-inf")
+        for action in self.getLegalActions(state):
+          QValue = self.getQValue(state,action)
+          if QValue > bestValue:
+            bestValue = QValue
+        
+        return bestValue
+    
+        #util.raiseNotDefined()
 
     def computeActionFromQValues(self, state):
         """
@@ -71,7 +86,24 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if (len(self.getLegalActions(state)) == 0):
+          return None
+        
+        legalActions = self.getLegalActions(state)
+        bestAction = None
+        bestValue = float("-inf")
+
+        for action in legalActions:
+            QValue = self.getQValue(state,action)
+            if QValue > bestValue:
+              bestAction = action
+              bestValue = QValue
+            elif QValue == bestValue:
+              bestAction = random.choice([bestAction, action])
+
+        return bestAction
+    
+        #util.raiseNotDefined()
 
     def getAction(self, state):
         """
@@ -88,9 +120,18 @@ class QLearningAgent(ReinforcementAgent):
         legalActions = self.getLegalActions(state)
         action = None
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if len(legalActions) == 0:
+          return None
+        else: 
+          boolean = util.flipCoin(self.epsilon)
+          if boolean == True:
+            action = random.choice(legalActions)
+          else:
+            action = self.getPolicy(state)
 
         return action
+
+        #util.raiseNotDefined()
 
     def update(self, state, action, nextState, reward):
         """
@@ -102,7 +143,13 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        currentQValue = self.getQValue(state, action)
+        updatedQValue = 1.0 * ((1 - self.alpha) * currentQValue + self.alpha * (reward + self.discount * self.computeValueFromQValues(nextState)))
+        self.QValues[(state,action)] = updatedQValue
+
+        return updatedQValue
+    
+        #util.raiseNotDefined()
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
@@ -165,6 +212,18 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
+        features = self.featExtractor.getFeatures(state, action)
+        weights = self.weights
+
+        totalQValue = 0
+
+        for feature in features.sortedKeys():
+          WValue = weights[feature]
+          FValue = features[feature]
+          totalQValue += WValue * FValue
+
+        return totalQValue
+
         util.raiseNotDefined()
 
     def update(self, state, action, nextState, reward):
@@ -172,6 +231,10 @@ class ApproximateQAgent(PacmanQAgent):
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
+        features = self.featExtractor.getFeatures(state, action)
+        difference = (reward + self.discount * self.computeValueFromQValues(nextState)) - self.getQValue(state, action)
+        for feature in features.sortedKeys():       
+          self.weights[feature] = self.weights[feature] + self.alpha * difference * features[feature]
         util.raiseNotDefined()
 
     def final(self, state):
